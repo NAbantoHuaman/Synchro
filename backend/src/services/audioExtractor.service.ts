@@ -7,9 +7,11 @@ const streamCache = new Map();
 const STREAM_CACHE_TTL = 1000 * 60 * 30; // 30 minutos
 
 /**
- * Limpia el contenido de las cookies eliminando caracteres no-ASCII que causan errores en Python/yt-dlp
+ * Limpia el contenido de las cookies eliminando solo caracteres de control problemáticos,
+ * pero preservando tabuladores (\t) y saltos de línea.
  */
 function cleanCookies(content: string): string {
+  // Solo eliminamos caracteres no-ASCII que NO sean tabuladores o saltos de línea
   return content.replace(/[^\x00-\x7F]/g, '');
 }
 
