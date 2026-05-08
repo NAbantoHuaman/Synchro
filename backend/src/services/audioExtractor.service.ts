@@ -32,56 +32,52 @@ export class AudioExtractorService {
         const url = `https://www.youtube.com/watch?v=${videoId}`;
         
         // Construimos un objeto de opciones fresco en cada iteración
-        const options: any = { 
+        const options: any = {
           dumpSingleJson: true,
           format: 'bestaudio/best',
           noCheckCertificate: true,
           noWarnings: true,
           geoBypass: true,
-          noCacheDir: true, // Evitar persistencia de bloqueos
-          noUpdate: true,   // No intentar actualizar el binario en ejecución
+          noCacheDir: true,
+          noUpdate: true,
           verbose: true,
           extractorArgs: `youtube:player_client=${client}`,
-          jsRuntimes: process.env.DENO_PATH ? `deno:${process.env.DENO_PATH}` : 'deno',
-          addHeader: [
-            'Accept-Language: es-ES,es;q=0.9,en;q=0.8',
-            'Accept-Encoding: gzip, deflate, br'
-          ]
+          jsRuntimes: process.env.DENO_PATH ? `deno:${process.env.DENO_PATH}` : 'deno'
         };
 
-        // Manejo de Cookies
-        const cookiesBase64 = process.env.YOUTUBE_COOKIES_BASE64;
-        const cookiesPath = process.env.YOUTUBE_COOKIES_PATH || 'cookies.txt';
+        // Manejo de Cookies: Solo las usamos para el cliente 'web'
+        // Las cookies de navegador suelen romper los clientes ios/android
+        if (client === 'web') {
+          const cookiesBase64 = process.env.YOUTUBE_COOKIES_BASE64;
+          const cookiesPath = process.env.YOUTUBE_COOKIES_PATH || 'cookies.txt';
 
-        if (cookiesBase64 && cookiesBase64.trim().length > 0) {
-          const tempFile = path.join(os.tmpdir(), `cookies_${client}_${Date.now()}.txt`);
-          let content = Buffer.from(cookiesBase64, 'base64').toString('utf-8');
-          content = cleanCookies(content);
-          fs.writeFileSync(tempFile, content);
-          options.cookies = tempFile;
-          console.log(`[yt-dlp] Using cookies from Base64 (temp file: ${tempFile})`);
-        } else {
-          // Intentar encontrar el archivo en varias ubicaciones posibles
-          const searchPaths = [
-            path.isAbsolute(cookiesPath) ? cookiesPath : path.join(process.cwd(), cookiesPath),
-            path.join(__dirname, '../../', cookiesPath),
-            path.join(__dirname, '../', cookiesPath),
-            path.join('/app', cookiesPath)
-          ];
-
-          let foundPath = null;
-          for (const p of searchPaths) {
-            if (fs.existsSync(p)) {
-              foundPath = p;
-              break;
-            }
-          }
-
-          if (foundPath) {
-            options.cookies = foundPath;
-            console.log(`[yt-dlp] Cookies found and applied from: ${foundPath}`);
+          if (cookiesBase64 && cookiesBase64.trim().length > 0) {
+            const tempFile = path.join(os.tmpdir(), `cookies_${client}_${Date.now()}.txt`);
+            let content = Buffer.from(cookiesBase64, 'base64').toString('utf-8');
+            content = cleanCookies(content);
+            fs.writeFileSync(tempFile, content);
+            options.cookies = tempFile;
+            console.log(`[yt-dlp] Using cookies from Base64 for web client`);
           } else {
-            console.error(`[yt-dlp] ⚠️ COOKIES NOT FOUND! Searched in: ${searchPaths.join(', ')}`);
+            const searchPaths = [
+              path.isAbsolute(cookiesPath) ? cookiesPath : path.join(process.cwd(), cookiesPath),
+              path.join(__dirname, '../../', cookiesPath),
+              path.join(__dirname, '../', cookiesPath),
+              path.join('/app', cookiesPath)
+            ];
+
+            let foundPath = null;
+            for (const p of searchPaths) {
+              if (fs.existsSync(p)) {
+                foundPath = p;
+                break;
+              }
+            }
+
+            if (foundPath) {
+              options.cookies = foundPath;
+              console.log(`[yt-dlp] Cookies found for web client at: ${foundPath}`);
+            }
           }
         }
 
