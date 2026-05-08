@@ -23,7 +23,7 @@ export class AudioExtractorService {
       return cached.data;
     }
 
-    const clients = ['web', 'ios', 'android'];
+    const clients = ['web', 'ios', 'android', 'web_embedded', 'android_embedded'];
     let lastError = null;
 
     for (const client of clients) {
