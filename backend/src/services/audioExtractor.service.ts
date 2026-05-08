@@ -1,7 +1,15 @@
+import axios from 'axios';
 import ytDlp from 'yt-dlp-exec';
 
 const streamCache = new Map();
 const STREAM_CACHE_TTL = 1000 * 60 * 30; // 30 minutos
+
+// Lista de instancias públicas de Piped para mayor fiabilidad
+const PIPED_INSTANCES = [
+  'https://pipedapi.kavin.rocks',
+  'https://api.piped.victr.me',
+  'https://pipedapi.leptons.xyz'
+];
 
 export class AudioExtractorService {
   static async getStreamUrl(videoId: string): Promise<any> {
@@ -11,39 +19,62 @@ export class AudioExtractorService {
       return cached.data;
     }
 
+    // Intentar primero con el Proxy de Piped (Más fiable en la nube)
+    for (const instance of PIPED_INSTANCES) {
+      try {
+        console.log(`Trying Proxy: ${instance} for ID: ${videoId}`);
+        const response = await axios.get(`${instance}/streams/${videoId}`, { timeout: 5000 });
+        
+        if (response.data && response.data.audioStreams) {
+          // Buscamos el stream de audio con mejor calidad
+          const bestAudio = response.data.audioStreams.reduce((prev: any, curr: any) => {
+            return (prev.bitrate > curr.bitrate) ? prev : curr;
+          });
+
+          const result = {
+            url: bestAudio.url,
+            bitrate: bestAudio.bitrate,
+            format: bestAudio.format || 'm4a',
+            proxy: instance
+          };
+
+          streamCache.set(videoId, { data: result, timestamp: Date.now() });
+          console.log(`✅ Success via Proxy: ${instance}`);
+          return result;
+        }
+      } catch (proxyError: any) {
+        console.warn(`Proxy ${instance} failed:`, proxyError.message);
+        continue; // Probar la siguiente instancia
+      }
+    }
+
+    // Si fallan los proxies, intentar como último recurso con yt-dlp local
     try {
-      const url = `https://www.youtube.com/embed/${videoId}`;
+      console.log('FALLBACK: Trying local yt-dlp extraction for ID:', videoId);
+      const url = `https://www.youtube.com/watch?v=${videoId}`;
       
       const output = await ytDlp(url, { 
         dumpSingleJson: true,
         format: 'bestaudio/best',
         noCheckCertificate: true,
         noWarnings: true,
-        preferFreeFormats: true,
         geoBypass: true,
-        extractorArgs: 'youtube:player_client=ios',
-        addHeader: [
-          'user-agent:Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
-          'accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'accept-language:en-us,en;q=0.5'
-        ]
+        extractorArgs: 'youtube:player_client=android,web',
+        addHeader: ['user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36']
       } as any);
       
       const info = output as any;
-      const bestAudio = (info.formats || []).find((f: any) => f.url === info.url) || info;
-
       const result = {
-        url: info.url || bestAudio.url,
-        bitrate: Math.round(info.abr || bestAudio.abr || 0),
-        format: info.ext || bestAudio.ext || 'unknown'
+        url: info.url,
+        bitrate: Math.round(info.abr || 0),
+        format: info.ext || 'unknown'
       };
 
       streamCache.set(videoId, { data: result, timestamp: Date.now() });
       return result;
     } catch (error: any) {
-      console.error('CRITICAL: yt-dlp extraction failed for ID:', videoId);
-      console.error('Error details:', error.stderr || error.message);
-      throw new Error(`Audio extraction failed: ${error.message || 'Internal Error'}`);
+      console.error('FINAL ERROR: All extraction methods failed for ID:', videoId);
+      throw new Error(`Audio extraction failed: ${error.message}`);
     }
   }
 }
