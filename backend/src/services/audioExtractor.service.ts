@@ -23,8 +23,7 @@ export class AudioExtractorService {
       return cached.data;
     }
 
-    // Cambiamos el orden: ios suele ser el más estable en Cloud
-    const clients = ['ios', 'android', 'web'];
+    const clients = ['web', 'ios', 'android'];
     let lastError = null;
 
     for (const client of clients) {
@@ -43,17 +42,12 @@ export class AudioExtractorService {
           noUpdate: true,   // No intentar actualizar el binario en ejecución
           verbose: true,
           extractorArgs: `youtube:player_client=${client}`,
-          jsRuntimes: process.env.DENO_PATH ? `deno:${process.env.DENO_PATH}` : 'deno'
+          jsRuntimes: process.env.DENO_PATH ? `deno:${process.env.DENO_PATH}` : 'deno',
+          addHeader: [
+            'Accept-Language: es-ES,es;q=0.9,en;q=0.8',
+            'Accept-Encoding: gzip, deflate, br'
+          ]
         };
-
-        // User-Agent específico para cada cliente
-        if (client === 'ios') {
-          options.userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1';
-        } else if (client === 'android') {
-          options.userAgent = 'com.google.android.youtube/19.09.37 (Linux; U; Android 11)';
-        } else if (client === 'web') {
-          options.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-        }
 
         // Manejo de Cookies
         const cookiesBase64 = process.env.YOUTUBE_COOKIES_BASE64;
