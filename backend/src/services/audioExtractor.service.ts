@@ -26,6 +26,22 @@ export class AudioExtractorService {
     const clients = ['tv', 'web', 'mweb', 'ios', 'android', 'web_embedded', 'android_embedded'];
     let lastError = null;
 
+    // Configuración de OAuth2 si existe el token en Base64
+    let oauthCacheDir: string | null = null;
+    if (process.env.YOUTUBE_OAUTH_B64) {
+      try {
+        oauthCacheDir = path.join(os.tmpdir(), `yt_cache_${Date.now()}`);
+        const youtubeDir = path.join(oauthCacheDir, 'youtube');
+        if (!fs.existsSync(youtubeDir)) fs.mkdirSync(youtubeDir, { recursive: true });
+        
+        const decodedToken = Buffer.from(process.env.YOUTUBE_OAUTH_B64, 'base64').toString('utf-8');
+        fs.writeFileSync(path.join(youtubeDir, 'oauth2.json'), decodedToken);
+        console.log('✅ [yt-dlp] OAuth2 Token loaded into temporary cache');
+      } catch (err) {
+        console.error('❌ [yt-dlp] Error setting up OAuth2 cache:', err);
+      }
+    }
+
     for (const client of clients) {
       try {
         console.log(`[yt-dlp] >>> STARTING ATTEMPT with client: ${client} for ID: ${videoId}`);
@@ -38,10 +54,13 @@ export class AudioExtractorService {
           noCheckCertificate: true,
           noWarnings: true,
           geoBypass: true,
-          noCacheDir: true,
+          noCacheDir: !oauthCacheDir, // Si hay OAuth, no desactivamos la caché
+          cacheDir: oauthCacheDir || undefined,
           noUpdate: true,
           verbose: true,
-          extractorArgs: `youtube:player_client=${client}`,
+          extractorArgs: process.env.YOUTUBE_PO_TOKEN 
+            ? `youtube:player_client=${client};po_token=web+${process.env.YOUTUBE_PO_TOKEN}`
+            : `youtube:player_client=${client}`,
           jsRuntimes: process.env.DENO_PATH ? `deno:${process.env.DENO_PATH}` : 'deno'
         };
 
@@ -110,12 +129,30 @@ export class AudioExtractorService {
     const url = `https://www.youtube.com/watch?v=${videoId}`;
     console.log(`[test-cookies] testing with videoId: ${videoId}`);
     
+    // Configuración de OAuth2 para el test
+    let oauthCacheDir: string | null = null;
+    if (process.env.YOUTUBE_OAUTH_B64) {
+      try {
+        oauthCacheDir = path.join(os.tmpdir(), `yt_cache_test_${Date.now()}`);
+        const youtubeDir = path.join(oauthCacheDir, 'youtube');
+        if (!fs.existsSync(youtubeDir)) fs.mkdirSync(youtubeDir, { recursive: true });
+        const decodedToken = Buffer.from(process.env.YOUTUBE_OAUTH_B64, 'base64').toString('utf-8');
+        fs.writeFileSync(path.join(youtubeDir, 'oauth2.json'), decodedToken);
+      } catch (err) {
+        console.error('Error setting up OAuth2 test cache:', err);
+      }
+    }
+
     const options: any = { 
       listFormats: true,
       noCheckCertificate: true,
       noWarnings: true,
       verbose: true,
-      extractorArgs: 'youtube:player_client=tv',
+      noCacheDir: !oauthCacheDir,
+      cacheDir: oauthCacheDir || undefined,
+      extractorArgs: process.env.YOUTUBE_PO_TOKEN 
+        ? `youtube:player_client=tv;po_token=web+${process.env.YOUTUBE_PO_TOKEN}`
+        : 'youtube:player_client=tv',
       jsRuntimes: process.env.DENO_PATH ? `deno:${process.env.DENO_PATH}` : 'deno'
     };
 
