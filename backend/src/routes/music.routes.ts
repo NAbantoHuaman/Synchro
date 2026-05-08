@@ -14,5 +14,6 @@ router.get('/lyrics/:id', MusicController.getLyrics);
 router.get('/related/:id', MusicController.getRelated);
 router.get('/daily-mix', MusicController.getDailyMix);
 router.get('/recommendations', MusicController.getRecommendations);
+router.get('/test-cookies', MusicController.testCookies);
 
 export default router;

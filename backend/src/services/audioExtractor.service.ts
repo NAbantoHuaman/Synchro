@@ -21,44 +21,48 @@ export class AudioExtractorService {
       return cached.data;
     }
 
-    const clients = ['web', 'ios', 'android'];
+    // Cambiamos el orden: ios suele ser el más estable en Cloud
+    const clients = ['ios', 'android', 'web'];
     let lastError = null;
 
     for (const client of clients) {
       try {
-        console.log(`[yt-dlp] Attempting extraction with client: ${client} for ID: ${videoId}`);
+        console.log(`[yt-dlp] >>> STARTING ATTEMPT with client: ${client} for ID: ${videoId}`);
         const url = `https://www.youtube.com/watch?v=${videoId}`;
         
+        // Construimos un objeto de opciones fresco en cada iteración
         const options: any = { 
           dumpSingleJson: true,
           format: 'bestaudio/best',
           noCheckCertificate: true,
           noWarnings: true,
           geoBypass: true,
-          verbose: true, // Activado temporalmente para debug
+          noCacheDir: true, // Evitar persistencia de bloqueos
+          noUpdate: true,   // No intentar actualizar el binario en ejecución
+          verbose: true,
           extractorArgs: `youtube:player_client=${client}`,
           jsRuntimes: process.env.DENO_PATH ? `deno:${process.env.DENO_PATH}` : 'deno'
         };
 
-        // User-Agent específico según el cliente para evitar HTTP 400
-        if (client === 'web') {
-          options.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-        } else if (client === 'ios') {
+        // User-Agent específico para cada cliente
+        if (client === 'ios') {
           options.userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1';
         } else if (client === 'android') {
           options.userAgent = 'com.google.android.youtube/19.09.37 (Linux; U; Android 11)';
+        } else if (client === 'web') {
+          options.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
         }
 
-        // Manejo de Cookies
-        const cookiesPath = process.env.YOUTUBE_COOKIES_PATH;
+        // Manejo de Cookies (archivo único por cada intento para evitar colisiones)
         const cookiesBase64 = process.env.YOUTUBE_COOKIES_BASE64;
+        const cookiesPath = process.env.YOUTUBE_COOKIES_PATH;
 
         if (cookiesBase64) {
-          const tempCookiesPath = path.join(os.tmpdir(), `youtube_cookies_${Date.now()}.txt`);
-          let cookiesContent = Buffer.from(cookiesBase64, 'base64').toString('utf-8');
-          cookiesContent = cleanCookies(cookiesContent);
-          fs.writeFileSync(tempCookiesPath, cookiesContent);
-          options.cookies = tempCookiesPath;
+          const tempFile = path.join(os.tmpdir(), `cookies_${client}_${Date.now()}.txt`);
+          let content = Buffer.from(cookiesBase64, 'base64').toString('utf-8');
+          content = cleanCookies(content);
+          fs.writeFileSync(tempFile, content);
+          options.cookies = tempFile;
         } else if (cookiesPath) {
           const fullPath = path.isAbsolute(cookiesPath) ? cookiesPath : path.join(process.cwd(), cookiesPath);
           if (fs.existsSync(fullPath)) {
@@ -77,17 +81,54 @@ export class AudioExtractorService {
         };
 
         streamCache.set(videoId, { data: result, timestamp: Date.now() });
-        console.log(`✅ [yt-dlp] Success with client: ${client}`);
+        console.log(`✅ [yt-dlp] SUCCESS with client: ${client}`);
         return result;
 
       } catch (error: any) {
-        console.warn(`[yt-dlp] Client ${client} failed:`, error.message);
+        console.warn(`❌ [yt-dlp] ATTEMPT FAILED with client: ${client}. Error:`, error.message);
         lastError = error;
-        continue; // Intentar con el siguiente cliente
+        // Continuamos al siguiente cliente en la lista
       }
     }
 
-    console.error('FINAL ERROR: All extraction clients failed for ID:', videoId);
-    throw new Error(`Audio extraction failed after trying all clients: ${lastError?.message}`);
+    console.error('Final failure: all yt-dlp clients exhausted.');
+    throw new Error(`Audio extraction failed: ${lastError?.message || 'Unknown error'}`);
+  }
+
+  static async testCookies(): Promise<string> {
+    const videoId = 'dQw4w9WgXcQ'; // Rick Astley - Never Gonna Give You Up (video de test)
+    const url = `https://www.youtube.com/watch?v=${videoId}`;
+    
+    const options: any = { 
+      listFormats: true,
+      noCheckCertificate: true,
+      noWarnings: true,
+      verbose: true,
+      jsRuntimes: process.env.DENO_PATH ? `deno:${process.env.DENO_PATH}` : 'deno'
+    };
+
+    // Manejo de Cookies
+    const cookiesBase64 = process.env.YOUTUBE_COOKIES_BASE64;
+    const cookiesPath = process.env.YOUTUBE_COOKIES_PATH;
+
+    if (cookiesBase64) {
+      const tempFile = path.join(os.tmpdir(), `test_cookies_${Date.now()}.txt`);
+      let content = Buffer.from(cookiesBase64, 'base64').toString('utf-8');
+      content = cleanCookies(content);
+      fs.writeFileSync(tempFile, content);
+      options.cookies = tempFile;
+    } else if (cookiesPath) {
+      const fullPath = path.isAbsolute(cookiesPath) ? cookiesPath : path.join(process.cwd(), cookiesPath);
+      if (fs.existsSync(fullPath)) {
+        options.cookies = fullPath;
+      }
+    }
+
+    try {
+      const output = await ytDlp(url, options);
+      return String(output);
+    } catch (error: any) {
+      throw new Error(`Cookie Test Failed: ${error.message}`);
+    }
   }
 }

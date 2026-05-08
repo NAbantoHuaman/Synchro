@@ -139,4 +139,13 @@ export class MusicController {
       res.status(500).json({ error: error.message });
     }
   }
+
+  static async testCookies(req: Request, res: Response) {
+    try {
+      const result = await AudioExtractorService.testCookies();
+      res.header('Content-Type', 'text/plain').send(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
 }
