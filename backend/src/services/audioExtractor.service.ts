@@ -12,7 +12,7 @@ export class AudioExtractorService {
     }
 
     try {
-      const url = `https://www.youtube.com/watch?v=${videoId}`;
+      const url = `https://www.youtube.com/embed/${videoId}`;
       
       const output = await ytDlp(url, { 
         dumpSingleJson: true,
@@ -20,11 +20,12 @@ export class AudioExtractorService {
         noCheckCertificate: true,
         noWarnings: true,
         preferFreeFormats: true,
-        youtubeSkipDashManifest: true,
         geoBypass: true,
-        extractorArgs: 'youtube:player_client=android,web',
+        extractorArgs: 'youtube:player_client=ios',
         addHeader: [
-          'user-agent:Mozilla/5.0 (Android 14; Mobile; rv:121.0) Gecko/121.0 Firefox/121.0'
+          'user-agent:Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+          'accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'accept-language:en-us,en;q=0.5'
         ]
       } as any);
       
