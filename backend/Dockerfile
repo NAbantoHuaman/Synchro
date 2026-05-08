@@ -1,6 +1,11 @@
 # Usamos una imagen de Node.js como base
 FROM node:18-slim
 
+# Forzamos UTF-8 para evitar errores de codificación en yt-dlp/Python
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+ENV PYTHONIOENCODING=utf-8
+
 # Instalamos dependencias del sistema necesarias para yt-dlp y extracción de audio
 RUN apt-get update && apt-get install -y \
     python3 \
