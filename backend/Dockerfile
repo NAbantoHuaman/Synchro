@@ -13,7 +13,12 @@ RUN apt-get update && apt-get install -y \
     python-is-python3 \
     ffmpeg \
     curl \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
+
+# Instalamos Deno para que yt-dlp resuelva los retos de JS (Signature/n-challenge)
+RUN curl -fsSL https://deno.land/x/install/install.sh | sh -s -- --dest /usr/local
+ENV PATH="/usr/local/bin:$PATH"
 
 # Instalamos yt-dlp globalmente usando pip
 RUN pip3 install yt-dlp --break-system-packages

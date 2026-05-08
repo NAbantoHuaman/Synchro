@@ -74,7 +74,8 @@ export class AudioExtractorService {
         noCheckCertificate: true,
         noWarnings: true,
         geoBypass: true,
-        extractorArgs: 'youtube:player_client=android,web'
+        extractorArgs: 'youtube:player_client=web,ios,android',
+        jsRuntimes: process.env.DENO_PATH ? `deno:${process.env.DENO_PATH}` : 'deno'
       };
 
       // Si hay una ruta de cookies configurada y el archivo existe, la usamos
