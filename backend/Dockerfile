@@ -17,7 +17,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Instalamos Deno para que yt-dlp resuelva los retos de JS (Signature/n-challenge)
-RUN curl -fsSL https://deno.land/install.sh | sh -s -- --dest /usr/local
+# Copiamos el binario directamente desde la imagen oficial de Deno para mayor fiabilidad
+COPY --from=denoland/deno:bin /deno /usr/local/bin/deno
 ENV PATH="/usr/local/bin:$PATH"
 
 # Instalamos yt-dlp globalmente usando pip
