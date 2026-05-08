@@ -14,4 +14,7 @@ data/*.json
 .vscode/
 .idea/
 .DS_Store
-Thumbs.db
+# Cookies (No subir sesiones de YouTube)
+cookies.txt
+*.txt_cookies
+www.youtube.com_cookies.txt

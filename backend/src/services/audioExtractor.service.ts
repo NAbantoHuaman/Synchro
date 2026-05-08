@@ -1,14 +1,21 @@
 import axios from 'axios';
 import ytDlp from 'yt-dlp-exec';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 
 const streamCache = new Map();
 const STREAM_CACHE_TTL = 1000 * 60 * 30; // 30 minutos
 
 // Lista de instancias públicas de Piped para mayor fiabilidad
+// Lista de instancias públicas de Piped para mayor fiabilidad
 const PIPED_INSTANCES = [
   'https://pipedapi.kavin.rocks',
-  'https://api.piped.victr.me',
-  'https://pipedapi.leptons.xyz'
+  'https://pipedapi.moomoo.me',
+  'https://api.piped.privacydev.net',
+  'https://piped-api.garudalinux.org',
+  'https://pipedapi.leptons.xyz',
+  'https://api.piped.projectsegfau.lt'
 ];
 
 export class AudioExtractorService {
@@ -53,7 +60,7 @@ export class AudioExtractorService {
       console.log('FALLBACK: Trying local yt-dlp extraction for ID:', videoId);
       const url = `https://www.youtube.com/watch?v=${videoId}`;
       
-      const output = await ytDlp(url, { 
+      const options: any = { 
         dumpSingleJson: true,
         format: 'bestaudio/best',
         noCheckCertificate: true,
@@ -61,7 +68,38 @@ export class AudioExtractorService {
         geoBypass: true,
         extractorArgs: 'youtube:player_client=android,web',
         addHeader: ['user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36']
-      } as any);
+      };
+
+      // Si hay una ruta de cookies configurada y el archivo existe, la usamos
+      const cookiesPath = process.env.YOUTUBE_COOKIES_PATH;
+      const cookiesBase64 = process.env.YOUTUBE_COOKIES_BASE64;
+
+      if (cookiesBase64) {
+        // En producción (Render/Vercel), usamos la variable de entorno Base64
+        const tempCookiesPath = path.join(os.tmpdir(), `youtube_cookies_${Date.now()}.txt`);
+        try {
+          const cookiesContent = Buffer.from(cookiesBase64, 'base64').toString('utf-8');
+          fs.writeFileSync(tempCookiesPath, cookiesContent);
+          console.log('Using cookies from YOUTUBE_COOKIES_BASE64 (temp file)');
+          options.cookie = tempCookiesPath;
+        } catch (err) {
+          console.error('Error decoding YOUTUBE_COOKIES_BASE64:', err);
+        }
+      } else if (cookiesPath) {
+        // En local, usamos el archivo físico
+        const fullPath = path.isAbsolute(cookiesPath) 
+          ? cookiesPath 
+          : path.join(process.cwd(), cookiesPath);
+        
+        if (fs.existsSync(fullPath)) {
+          console.log(`Using cookies from file: ${fullPath}`);
+          options.cookie = fullPath;
+        } else {
+          console.warn(`Cookie file not found at: ${fullPath}`);
+        }
+      }
+
+      const output = await ytDlp(url, options);
       
       const info = output as any;
       const result = {
