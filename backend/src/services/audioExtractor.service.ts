@@ -23,7 +23,10 @@ export class AudioExtractorService {
       return cached.data;
     }
 
-    const clients = ['tv', 'web', 'mweb', 'ios', 'android', 'web_embedded', 'android_embedded'];
+    // Si tenemos PO Token de navegador, probamos 'web' primero
+    const clients = process.env.YOUTUBE_PO_TOKEN 
+      ? ['web', 'tv', 'mweb', 'ios', 'android', 'web_embedded', 'android_embedded']
+      : ['tv', 'web', 'mweb', 'ios', 'android', 'web_embedded', 'android_embedded'];
     let lastError = null;
 
     // Configuración de OAuth2 si existe el token en Base64
@@ -151,8 +154,8 @@ export class AudioExtractorService {
       noCacheDir: !oauthCacheDir,
       cacheDir: oauthCacheDir || undefined,
       extractorArgs: process.env.YOUTUBE_PO_TOKEN 
-        ? `youtube:player_client=tv;po_token=web+${process.env.YOUTUBE_PO_TOKEN}`
-        : 'youtube:player_client=tv',
+        ? `youtube:player_client=web;po_token=web+${process.env.YOUTUBE_PO_TOKEN}`
+        : 'youtube:player_client=web',
       jsRuntimes: process.env.DENO_PATH ? `deno:${process.env.DENO_PATH}` : 'deno'
     };
 
