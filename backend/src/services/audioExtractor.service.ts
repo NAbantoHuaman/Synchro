@@ -18,6 +18,14 @@ const PIPED_INSTANCES = [
   'https://api.piped.projectsegfau.lt'
 ];
 
+/**
+ * Limpia el contenido de las cookies eliminando caracteres no-ASCII que causan errores en Python/yt-dlp
+ */
+function cleanCookies(content: string): string {
+  // Solo permitimos caracteres ASCII imprimibles, tabs y saltos de línea
+  return content.replace(/[^\x00-\x7F]/g, '');
+}
+
 export class AudioExtractorService {
   static async getStreamUrl(videoId: string): Promise<any> {
     const cached = streamCache.get(videoId);
@@ -77,9 +85,12 @@ export class AudioExtractorService {
         // En producción (Render/Vercel), usamos la variable de entorno Base64
         const tempCookiesPath = path.join(os.tmpdir(), `youtube_cookies_${Date.now()}.txt`);
         try {
-          const cookiesContent = Buffer.from(cookiesBase64, 'base64').toString('utf-8');
+          let cookiesContent = Buffer.from(cookiesBase64, 'base64').toString('utf-8');
+          // Limpiamos caracteres que rompen el codec latin-1 de Python
+          cookiesContent = cleanCookies(cookiesContent);
+          
           fs.writeFileSync(tempCookiesPath, cookiesContent);
-          console.log('Using cookies from YOUTUBE_COOKIES_BASE64 (temp file)');
+          console.log('Using cookies from YOUTUBE_COOKIES_BASE64 (temp file cleaned)');
           options.cookies = tempCookiesPath;
         } catch (err) {
           console.error('Error decoding YOUTUBE_COOKIES_BASE64:', err);
