@@ -81,7 +81,7 @@ export class AudioExtractorService {
           const cookiesContent = Buffer.from(cookiesBase64, 'base64').toString('utf-8');
           fs.writeFileSync(tempCookiesPath, cookiesContent);
           console.log('Using cookies from YOUTUBE_COOKIES_BASE64 (temp file)');
-          options.cookie = tempCookiesPath;
+          options.cookies = tempCookiesPath;
         } catch (err) {
           console.error('Error decoding YOUTUBE_COOKIES_BASE64:', err);
         }
@@ -93,7 +93,7 @@ export class AudioExtractorService {
         
         if (fs.existsSync(fullPath)) {
           console.log(`Using cookies from file: ${fullPath}`);
-          options.cookie = fullPath;
+          options.cookies = fullPath;
         } else {
           console.warn(`Cookie file not found at: ${fullPath}`);
         }
