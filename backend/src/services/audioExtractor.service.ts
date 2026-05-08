@@ -55,20 +55,39 @@ export class AudioExtractorService {
           options.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
         }
 
-        // Manejo de Cookies (archivo único por cada intento para evitar colisiones)
+        // Manejo de Cookies
         const cookiesBase64 = process.env.YOUTUBE_COOKIES_BASE64;
-        const cookiesPath = process.env.YOUTUBE_COOKIES_PATH;
+        const cookiesPath = process.env.YOUTUBE_COOKIES_PATH || 'cookies.txt';
 
-        if (cookiesBase64) {
+        if (cookiesBase64 && cookiesBase64.trim().length > 0) {
           const tempFile = path.join(os.tmpdir(), `cookies_${client}_${Date.now()}.txt`);
           let content = Buffer.from(cookiesBase64, 'base64').toString('utf-8');
           content = cleanCookies(content);
           fs.writeFileSync(tempFile, content);
           options.cookies = tempFile;
-        } else if (cookiesPath) {
-          const fullPath = path.isAbsolute(cookiesPath) ? cookiesPath : path.join(process.cwd(), cookiesPath);
-          if (fs.existsSync(fullPath)) {
-            options.cookies = fullPath;
+          console.log(`[yt-dlp] Using cookies from Base64 (temp file: ${tempFile})`);
+        } else {
+          // Intentar encontrar el archivo en varias ubicaciones posibles
+          const searchPaths = [
+            path.isAbsolute(cookiesPath) ? cookiesPath : path.join(process.cwd(), cookiesPath),
+            path.join(__dirname, '../../', cookiesPath),
+            path.join(__dirname, '../', cookiesPath),
+            path.join('/app', cookiesPath)
+          ];
+
+          let foundPath = null;
+          for (const p of searchPaths) {
+            if (fs.existsSync(p)) {
+              foundPath = p;
+              break;
+            }
+          }
+
+          if (foundPath) {
+            options.cookies = foundPath;
+            console.log(`[yt-dlp] Cookies found and applied from: ${foundPath}`);
+          } else {
+            console.error(`[yt-dlp] ⚠️ COOKIES NOT FOUND! Searched in: ${searchPaths.join(', ')}`);
           }
         }
 
@@ -111,18 +130,36 @@ export class AudioExtractorService {
 
     // Manejo de Cookies
     const cookiesBase64 = process.env.YOUTUBE_COOKIES_BASE64;
-    const cookiesPath = process.env.YOUTUBE_COOKIES_PATH;
+    const cookiesPath = process.env.YOUTUBE_COOKIES_PATH || 'cookies.txt';
 
-    if (cookiesBase64) {
+    if (cookiesBase64 && cookiesBase64.trim().length > 0) {
       const tempFile = path.join(os.tmpdir(), `test_cookies_${Date.now()}.txt`);
       let content = Buffer.from(cookiesBase64, 'base64').toString('utf-8');
       content = cleanCookies(content);
       fs.writeFileSync(tempFile, content);
       options.cookies = tempFile;
-    } else if (cookiesPath) {
-      const fullPath = path.isAbsolute(cookiesPath) ? cookiesPath : path.join(process.cwd(), cookiesPath);
-      if (fs.existsSync(fullPath)) {
-        options.cookies = fullPath;
+      console.log(`[test-cookies] Using cookies from Base64 (temp: ${tempFile})`);
+    } else {
+      const searchPaths = [
+        path.isAbsolute(cookiesPath) ? cookiesPath : path.join(process.cwd(), cookiesPath),
+        path.join(__dirname, '../../', cookiesPath),
+        path.join(__dirname, '../', cookiesPath),
+        path.join('/app', cookiesPath)
+      ];
+
+      let foundPath = null;
+      for (const p of searchPaths) {
+        if (fs.existsSync(p)) {
+          foundPath = p;
+          break;
+        }
+      }
+
+      if (foundPath) {
+        options.cookies = foundPath;
+        console.log(`[test-cookies] Cookies found at: ${foundPath}`);
+      } else {
+        console.error(`[test-cookies] ⚠️ NOT FOUND! Paths: ${searchPaths.join(', ')}`);
       }
     }
 
