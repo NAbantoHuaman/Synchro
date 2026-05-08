@@ -12,18 +12,19 @@ export class AudioExtractorService {
     }
 
     try {
-      const url = `https://music.youtube.com/watch?v=${videoId}`;
+      const url = `https://www.youtube.com/watch?v=${videoId}`;
       
       const output = await ytDlp(url, { 
         dumpSingleJson: true,
-        format: 'bestaudio[acodec^=opus]/bestaudio[ext=webm]/bestaudio',
+        format: 'bestaudio/best',
         noCheckCertificate: true,
         noWarnings: true,
-        extractorArgs: 'youtube:player_client=web_remix',
+        preferFreeFormats: true,
+        youtubeSkipDashManifest: true,
+        geoBypass: true,
+        extractorArgs: 'youtube:player_client=android,web',
         addHeader: [
-          'referer:https://music.youtube.com/',
-          'origin:https://music.youtube.com/',
-          'user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+          'user-agent:Mozilla/5.0 (Android 14; Mobile; rv:121.0) Gecko/121.0 Firefox/121.0'
         ]
       } as any);
       
