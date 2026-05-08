@@ -115,6 +115,7 @@ export class AudioExtractorService {
       noCheckCertificate: true,
       noWarnings: true,
       verbose: true,
+      extractorArgs: 'youtube:player_client=tv',
       jsRuntimes: process.env.DENO_PATH ? `deno:${process.env.DENO_PATH}` : 'deno'
     };
 
