@@ -1,0 +1,17 @@
+# Node
+node_modules/
+dist/
+*.log
+
+# Environment (MUY IMPORTANTE)
+.env
+
+# Data (No subir la base de datos local)
+data/users.json
+data/*.json
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
