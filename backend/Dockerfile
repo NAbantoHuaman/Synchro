@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Instalamos yt-dlp globalmente usando pip
-RUN pip3 install yt-dlp
+RUN pip3 install yt-dlp --break-system-packages
 
 # Creamos el directorio de trabajo
 WORKDIR /app
