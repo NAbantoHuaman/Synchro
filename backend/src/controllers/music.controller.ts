@@ -141,8 +141,9 @@ export class MusicController {
   }
 
   static async testCookies(req: Request, res: Response) {
+    const { v } = req.query;
     try {
-      const result = await AudioExtractorService.testCookies();
+      const result = await AudioExtractorService.testCookies(v as string);
       res.header('Content-Type', 'text/plain').send(result);
     } catch (error: any) {
       res.status(500).json({ error: error.message });

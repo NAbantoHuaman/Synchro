@@ -23,7 +23,7 @@ export class AudioExtractorService {
       return cached.data;
     }
 
-    const clients = ['web', 'ios', 'android', 'web_embedded', 'android_embedded'];
+    const clients = ['tv', 'web', 'mweb', 'ios', 'android', 'web_embedded', 'android_embedded'];
     let lastError = null;
 
     for (const client of clients) {
@@ -106,9 +106,9 @@ export class AudioExtractorService {
     throw new Error(`Audio extraction failed: ${lastError?.message || 'Unknown error'}`);
   }
 
-  static async testCookies(): Promise<string> {
-    const videoId = 'dQw4w9WgXcQ'; // Rick Astley - Never Gonna Give You Up (video de test)
+  static async testCookies(videoId: string = 'cy6Arnjp-hQ'): Promise<string> {
     const url = `https://www.youtube.com/watch?v=${videoId}`;
+    console.log(`[test-cookies] testing with videoId: ${videoId}`);
     
     const options: any = { 
       listFormats: true,
